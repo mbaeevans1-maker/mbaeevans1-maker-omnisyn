@@ -1223,7 +1223,7 @@ const tenantSchema = z.object({
   tagline: z.string().max(200).optional().nullable(),
   about: z.string().max(2000).optional().nullable(),
   gallery: z.array(z.string().max(600)).max(12).optional(),
-  social_links: z.record(z.string().max(600)).optional(),
+  social_links: z.record(z.string(), z.string().max(600)).optional(),
   booking_rules: z.object({
     slotIntervalMin: z.number().int().min(5).max(120).optional(),
     leadTimeMin: z.number().int().min(0).max(10080).optional(),
