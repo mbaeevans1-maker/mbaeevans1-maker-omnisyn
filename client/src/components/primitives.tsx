@@ -92,16 +92,17 @@ export function Textarea({ label, hint, error, className = '', id, required, ...
 
 type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   label?: string; hint?: string; error?: string;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
 };
 
-export function Select({ label, hint, error, options, className = '', id, required, ...rest }: SelectProps) {
+export function Select({ label, hint, error, options, className = '', id, required, children, ...rest }: SelectProps) {
   const autoId = useId();
   const fieldId = id || autoId;
   return (
     <Field label={label} hint={hint} error={error} required={required} htmlFor={fieldId}>
       <select id={fieldId} className={className} {...rest}>
-        {options.map((o) => (
+        {children}
+        {(options || []).map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
