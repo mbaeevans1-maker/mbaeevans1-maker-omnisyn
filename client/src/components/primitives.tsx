@@ -110,7 +110,7 @@ export function Select({ label, hint, error, options, className = '', id, requir
   );
 }
 
-export function Switch({ checked, onChange, label, description }: { checked: boolean | number; onChange: (v: boolean) => void; label: string; description?: string }) {
+export function Switch({ checked, onChange, label, description }: { checked: boolean | number; onChange: (v: boolean) => void; label?: string; description?: string }) {
   return (
     <button
       type="button"

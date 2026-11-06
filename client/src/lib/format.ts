@@ -156,3 +156,15 @@ export function digitsOnly(value: string): string {
 }
 
 export const timeAgo = relative;
+
+export function tagList(tags?: string | string[] | null): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.filter(Boolean).map(String);
+  try {
+    const parsed = JSON.parse(tags);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+  } catch {
+    /* not JSON: fall through to comma split */
+  }
+  return tags.split(',').map((t) => t.trim()).filter(Boolean);
+}
