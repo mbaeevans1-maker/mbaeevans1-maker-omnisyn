@@ -33,7 +33,7 @@ const INDUSTRIES = [
 
 export default function Home() {
   const { user, tenant } = useSession();
-  const appHref = user ? (user.role === 'platform_admin' ? '/admin' : tenant ? '/app' : '/onboarding') : '/signup';
+  const appHref = user ? (user.role === 'platform_admin' ? '/admin' : tenant ? '/app' : '/app/setup') : '/signup';
 
   return (
     <div className="overflow-x-clip">
