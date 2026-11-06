@@ -185,7 +185,7 @@ export function createAppointment({
   if (start.getTime() < Date.now() - 60000 && !skipValidation) throw badRequest('Appointments cannot be created in the past.');
   const end = new Date(start.getTime() + service.duration_min * 60000);
 
-  const create = tx(() => {
+  const appointment = tx(() => {
     assertSlotFree({ tenantId: tenant.id, staffId, startAt: start.toISOString(), endAt: end.toISOString() });
     const resolvedCustomer = customer?.id
       ? get(`SELECT * FROM customers WHERE id = ? AND tenant_id = ?`, [customer.id, tenant.id])
@@ -211,7 +211,6 @@ export function createAppointment({
     return get(`SELECT * FROM appointments WHERE id = ?`, [id]);
   });
 
-  const appointment = create();
   if (actor) {
     // audit handled by route layer to keep this module DB-focused
   }
