@@ -4,9 +4,9 @@ import {
   ArrowRight, CalendarDays, Check, ChevronLeft, Clock3, Copy, Globe2, MapPin, MessageCircle,
   Phone, Send, Sparkles, Users, X,
 } from 'lucide-react';
-import { api, errorMessage } from '../lib/api';
-import { addDays, dateLong, duration, money, timeOf, titleCase, todayIso, weekdayOf } from '../lib/format';
-import { Button, Chip, EmptyState, Field, Input, Spinner, Textarea } from '../components/primitives';
+import { api, errorMessage } from '../../lib/api';
+import { addDays, dateLong, duration, money, timeOf, titleCase, todayIso, weekdayOf } from '../../lib/format';
+import { Button, Chip, EmptyState, Field, Input, Spinner, Textarea } from '../../components/primitives';
 
 type Business = {
   id: string; slug: string; name: string; industry: string; tagline?: string | null; about?: string | null;

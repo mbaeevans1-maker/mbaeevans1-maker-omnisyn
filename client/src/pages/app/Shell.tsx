@@ -253,7 +253,7 @@ export function AppShell() {
               <p className="truncate text-[0.85rem] font-medium text-white">{tenant?.name}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {subscription && <StatusChip status={subscription.status} />}
-                {onboardingIncomplete && <Chip tone="warn">Setup {tenant?.onboarding_step}/11</Chip>}
+                {onboardingIncomplete && <Chip tone="warn">Setup {Number(tenant?.onboarding_step ?? 0)}/11</Chip>}
               </div>
             </div>
             <nav className="flex flex-col gap-0.5">

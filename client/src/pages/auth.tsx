@@ -63,7 +63,7 @@ export function Login() {
     setError('');
     try {
       const session = await login(email, password);
-      const role = session?.user?.role;
+      const role = (session as unknown as { user?: { role?: string } } | null)?.user?.role;
       nav(next || (role === 'platform_admin' ? '/admin' : '/app'), { replace: true });
     } catch (err) {
       setError(errorMessage(err));

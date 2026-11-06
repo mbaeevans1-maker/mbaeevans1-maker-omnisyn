@@ -8,7 +8,7 @@ import {
   Alert, Avatar, Button, Card, CardHeader, Chip, EmptyState, Field, Input, Modal, PageHeader,
   SkeletonRows, Tabs, Textarea, useToast,
 } from '../../components/primitives';
-import { dateTime, initials, money, num, relative, titleCase } from '../../lib/format';
+import { dateTime, initials, money, num, relative, tagList, titleCase } from '../../lib/format';
 
 type Counts = { all: number; new: number; returning: number; vip: number; inactive: number };
 type Segment = 'all' | 'new' | 'returning' | 'vip' | 'inactive';
@@ -132,7 +132,7 @@ export function CustomersPage() {
                     </p>
                   </div>
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                    {(c.tags || []).slice(0, 2).map((t) => (
+                    {tagList(c.tags).slice(0, 2).map((t) => (
                       <Chip key={t} tone="violet">{titleCase(t)}</Chip>
                     ))}
                     {c.marketing_consent && <Chip tone="gold">Consent</Chip>}
@@ -169,7 +169,7 @@ function CustomerForm({ customer, onClose, onSaved }: { customer: Customer | nul
   const [email, setEmail] = useState(customer?.email || '');
   const [notes, setNotes] = useState((customer as { notes?: string | null })?.notes || '');
   const [preferences, setPreferences] = useState((customer as { preferences?: string | null })?.preferences || '');
-  const [tags, setTags] = useState((customer?.tags || []).join(', '));
+  const [tags, setTags] = useState(tagList(customer?.tags).join(', '));
   const [consent, setConsent] = useState(Boolean(customer?.marketing_consent));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -278,13 +278,13 @@ function CustomerDrawer({ id, onClose, onEdit }: { id: string; onClose: () => vo
       ) : (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-3">
-            <MiniStat label="Visits" value={num(data.customer.visits || 0)} />
+            <MiniStat label="Visits" value={num(Number(data.customer.visits || 0))} />
             <MiniStat label="Spend" value={money(data.customer.total_spent_cents || 0)} />
             <MiniStat label="Last visit" value={data.customer.last_visit_at ? relative(data.customer.last_visit_at) : '—'} />
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {(data.customer.tags || []).map((t) => <Chip key={t} tone="violet"><Tag size={11} className="mr-1" />{titleCase(t)}</Chip>)}
+            {tagList(data.customer.tags).map((t) => <Chip key={t} tone="violet"><Tag size={11} className="mr-1" />{titleCase(t)}</Chip>)}
             {data.customer.marketing_consent && <Chip tone="gold">Marketing consent</Chip>}
           </div>
 
