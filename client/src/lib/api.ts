@@ -24,8 +24,15 @@ type Options = {
   signal?: AbortSignal;
 };
 
+// Callers may pass either "/public/plans" or "/api/public/plans"; normalise so the
+// prefix is applied exactly once (a doubled /api/api/... prefix 404s in production).
+function normalisePath(path: string): string {
+  if (path === '/api') return '';
+  return path.startsWith('/api/') ? path.slice(4) : path;
+}
+
 async function request<T>(path: string, opts: Options = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`/api${normalisePath(path)}`, {
     method: opts.method || 'GET',
     credentials: 'same-origin',
     headers: opts.body ? { 'Content-Type': 'application/json' } : undefined,
