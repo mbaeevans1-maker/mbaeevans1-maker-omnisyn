@@ -1,3 +1,4 @@
+import './lib/async-guard.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';

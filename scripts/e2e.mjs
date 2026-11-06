@@ -209,7 +209,7 @@ try {
   const custList = customers.body?.customers ?? [];
   check('CRM recorded the booking customer', customers.status === 200 && custList.some((c) => c.name === 'Wanjiru Kamau'), customers.body);
 
-  const content = await owner.post('/api/tenant/content/generate', { kind: 'promotion', topic: 'Weekend glow offer' });
+  const content = await owner.post('/api/tenant/content/generate', { kind: 'promotion', channel: 'instagram', brief: 'Weekend glow offer for existing customers' });
   check('AI content generation responds without server error', content.status < 500, content.body);
 
   const integrations = await owner.get('/api/tenant/integrations');
