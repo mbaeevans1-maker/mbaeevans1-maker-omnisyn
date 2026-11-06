@@ -1522,4 +1522,215 @@ router.get('/me', requireAuth, (req, res) => {
   });
 });
 
+/* -------------------- automation centre & outbox -------------------- */
+
+router.get('/automations', guard, (req, res) => {
+  const tenant = tenantOf(req);
+  const automations = listAutomations(tenant.id);
+  const whatsapp = get(
+    `SELECT status FROM integrations WHERE tenant_id = ? AND provider = 'whatsapp' LIMIT 1`,
+    [tenant.id],
+  );
+  const counts = get(
+    `SELECT
+       SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent,
+       SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued,
+       SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) AS blocked,
+       COUNT(*) AS total
+     FROM outbox WHERE tenant_id = ?`,
+    [tenant.id],
+  );
+  res.json({
+    automations,
+    whatsapp_status: whatsapp?.status || 'not_connected',
+    outbox_counts: {
+      sent: counts?.sent ?? 0,
+      queued: counts?.queued ?? 0,
+      blocked: counts?.blocked ?? 0,
+      total: counts?.total ?? 0,
+    },
+  });
+});
+
+router.patch('/automations/:id', guard, can('bookings:write'), (req, res) => {
+  const tenant = tenantOf(req);
+  const row = get(`SELECT * FROM automations WHERE id = ? AND tenant_id = ?`, [req.params.id, tenant.id]);
+  if (!row) throw notFound('Automation not found.');
+  const data = validate(z.object({
+    enabled: z.boolean().optional(),
+    name: z.string().trim().min(2).max(80).optional(),
+    template: z.string().trim().min(10, 'Message must be at least 10 characters.').max(1200).optional(),
+    delay_minutes: z.number().int().min(-10080).max(100000).optional(),
+  }), req.body || {});
+  run(
+    `UPDATE automations SET enabled = ?, name = ?, template = ?, delay_minutes = ?, updated_at = ?
+      WHERE id = ? AND tenant_id = ?`,
+    [
+      data.enabled === undefined ? row.enabled : (data.enabled ? 1 : 0),
+      data.name ?? row.name,
+      data.template ?? row.template,
+      data.delay_minutes ?? row.delay_minutes,
+      nowIso(), row.id, tenant.id,
+    ],
+  );
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'automation.update', target: row.key,
+    meta: { enabled: data.enabled, template_changed: Boolean(data.template) }, ip: req.ip,
+  });
+  res.json({ automation: listAutomations(tenant.id).find((a) => a.id === row.id) });
+});
+
+router.post('/automations/run-now', guard, can('bookings:write'), async (req, res) => {
+  const tenant = tenantOf(req);
+  const result = await runDueAutomations({ tenantId: tenant.id });
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'automation.run_now',
+    target: 'sweep', meta: result, ip: req.ip,
+  });
+  res.json({ ...result, messages: listOutbox(tenant.id, { limit: 10 }) });
+});
+
+router.post('/automations/:id/test', guard, can('bookings:write'), async (req, res) => {
+  const tenant = tenantOf(req);
+  const row = get(`SELECT * FROM automations WHERE id = ? AND tenant_id = ?`, [req.params.id, tenant.id]);
+  if (!row) throw notFound('Automation not found.');
+  const data = validate(z.object({ to: z.string().trim().min(7).max(40).optional() }), req.body || {});
+  const recipient = data.to || tenant.whatsapp || tenant.phone;
+  if (!recipient) throw badRequest('Add a WhatsApp number for this business first.');
+  const base = absoluteBase(req);
+  const body = renderTemplate(row.template, {
+    business_name: tenant.name,
+    business_address: tenant.address || tenant.city || '',
+    business_phone: tenant.whatsapp || tenant.phone || '',
+    customer_name: 'Test customer',
+    customer_phone: recipient,
+    service_name: 'Signature service',
+    staff_name: 'our team',
+    when: new Intl.DateTimeFormat('en-GB', {
+      timeZone: tenant.timezone || 'Africa/Nairobi',
+      weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date()),
+    booking_link: `${base}/business/${tenant.slug}`,
+    review_link: `${base}/business/${tenant.slug}#review`,
+  });
+  const message = await enqueueMessage({
+    tenant, automationKey: row.key, recipient, recipientName: tenant.name, body,
+    relatedType: 'automation_test', relatedId: row.id,
+  });
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'automation.test', target: row.key,
+    meta: { status: message.status }, ip: req.ip,
+  });
+  res.status(201).json({ message, sent: message.status === 'sent' });
+});
+
+router.get('/outbox', guard, (req, res) => {
+  const tenant = tenantOf(req);
+  const status = req.query.status ? String(req.query.status) : 'all';
+  res.json({
+    messages: listOutbox(tenant.id, { limit: req.query.limit, status }),
+    whatsapp_link_ready: true,
+  });
+});
+
+router.post('/outbox/:id/sent', guard, can('bookings:write'), (req, res) => {
+  const tenant = tenantOf(req);
+  const row = markOutboxSent(tenant.id, req.params.id, req.user);
+  if (!row) throw notFound('Message not found.');
+  res.json({ message: row });
+});
+
+/* --------------------------- intelligence --------------------------- */
+
+router.get('/insights', guard, can('analytics:read'), (req, res) => {
+  const tenant = tenantOf(req);
+  const days = Math.min(Math.max(Number(req.query.days) || 30, 7), 365);
+  res.json(insights(tenant, { days }));
+});
+
+/* ------------------------------ reviews ------------------------------ */
+
+router.get('/reviews', guard, (req, res) => {
+  const tenant = tenantOf(req);
+  const rows = all(
+    `SELECT * FROM reviews WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200`,
+    [tenant.id],
+  );
+  const summary = get(
+    `SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0) AS average
+       FROM reviews WHERE tenant_id = ? AND status = 'published'`,
+    [tenant.id],
+  );
+  const pending = get(
+    `SELECT COUNT(*) AS n FROM reviews WHERE tenant_id = ? AND status = 'pending'`,
+    [tenant.id],
+  );
+  res.json({
+    reviews: rows,
+    summary: {
+      published: summary?.total ?? 0,
+      average: Math.round((summary?.average ?? 0) * 10) / 10,
+      pending: pending?.n ?? 0,
+    },
+  });
+});
+
+router.patch('/reviews/:id', guard, can('bookings:write'), (req, res) => {
+  const tenant = tenantOf(req);
+  const row = get(`SELECT * FROM reviews WHERE id = ? AND tenant_id = ?`, [req.params.id, tenant.id]);
+  if (!row) throw notFound('Review not found.');
+  const data = validate(z.object({
+    status: z.enum(['pending', 'published', 'hidden']).optional(),
+    reply: z.string().trim().max(1000).optional(),
+  }), req.body || {});
+  run(`UPDATE reviews SET status = ?, reply = ?, updated_at = ? WHERE id = ? AND tenant_id = ?`, [
+    data.status ?? row.status, data.reply ?? row.reply, nowIso(), row.id, tenant.id,
+  ]);
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'review.update', target: row.id,
+    meta: { status: data.status ?? row.status }, ip: req.ip,
+  });
+  res.json({ review: get(`SELECT * FROM reviews WHERE id = ?`, [row.id]) });
+});
+
+/* ----------------------- subscription payments ----------------------- */
+
+router.get('/payments', guard, can('billing:read'), (req, res) => {
+  const tenant = tenantOf(req);
+  const subscription = get(
+    `SELECT * FROM subscriptions WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1`,
+    [tenant.id],
+  );
+  const plan = subscription ? planById(subscription.plan_id) : null;
+  res.json({
+    instructions: paymentInstructions(plan, subscription?.interval || 'monthly'),
+    requests: listPaymentRequests({ tenantId: tenant.id }),
+    plan: plan ? { id: plan.id, name: plan.name, price_monthly: plan.price_monthly, price_yearly: plan.price_yearly } : null,
+    subscription: subscription
+      ? { status: subscription.status, interval: subscription.interval, current_period_end: subscription.current_period_end }
+      : null,
+  });
+});
+
+router.post('/payments/request', guard, can('billing:write'), (req, res) => {
+  const tenant = tenantOf(req);
+  const data = validate(z.object({
+    planId: z.string().min(1),
+    interval: z.enum(['monthly', 'yearly']).optional(),
+    method: z.enum(['mpesa', 'bank', 'card']),
+    payerReference: z.string().trim().min(3, 'Enter the M-Pesa or bank reference.').max(80),
+    payerPhone: z.string().trim().max(40).optional(),
+    note: z.string().trim().max(500).optional(),
+  }), req.body || {});
+  const request = createPaymentRequest({ tenant, user: req.user, ...data });
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'payment.submitted', target: request.id,
+    meta: { method: data.method, amount_cents: request.amount_cents }, ip: req.ip,
+  });
+  res.status(201).json({
+    request,
+    message: 'Payment submitted. It appears as pending until the platform owner verifies it — nothing is marked paid automatically.',
+  });
+});
+
 export default router;

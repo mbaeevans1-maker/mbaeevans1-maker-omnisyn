@@ -307,7 +307,7 @@ export async function fireEvent({ tenant, event, appointment = null, customer = 
  * Background sweep: reminders due in the next 24h and customers who have gone
  * quiet. Bounded per tenant so a large workspace cannot stall the loop.
  */
-export async function runDueAutomations({ tenantLimit = 200, perTenantLimit = 25 } = {}) {
+export async function runDueAutomations({ tenantLimit = 200, perTenantLimit = 25, tenantId = null } = {}) {
   const now = Date.now();
   const from = new Date(now + 23 * 3600_000).toISOString();
   const to = new Date(now + 25 * 3600_000).toISOString();
