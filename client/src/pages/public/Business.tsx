@@ -35,7 +35,7 @@ export default function BusinessPage() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    api.get<Payload>(`/public/business/${slug}`)
+    api.get<Payload>(`/business/${slug}`)
       .then((res) => { if (alive) { setData(res); setError(null); } })
       .catch((err) => { if (alive) setError(errorMessage(err)); })
       .finally(() => { if (alive) setLoading(false); });
@@ -174,7 +174,7 @@ export default function BusinessPage() {
             <div className="rounded-xl border border-white/[0.06] p-4">
               <p className="text-[0.7rem] uppercase tracking-[0.2em] text-[#6f7889]">Share</p>
               <div className="mt-3 flex items-center gap-2">
-                <img src={`/api/public/business/${business.slug}/qr`} alt="Booking QR code" className="h-20 w-20 rounded-md bg-white p-1" />
+                <img src={`/api/business/${business.slug}/qr`} alt="Booking QR code" className="h-20 w-20 rounded-md bg-white p-1" />
                 <p className="text-[0.7rem] leading-relaxed text-[#7d8798]">Scan to open this booking page.</p>
               </div>
             </div>
@@ -226,7 +226,7 @@ function BookingSection({ slug, services, currency, brand, rules }: {
     setLoadingSlots(true);
     setSlot(null);
     try {
-      const res = await api.get<{ slots: Slot[] }>(`/public/business/${slug}/availability?serviceId=${serviceId}&date=${date}`);
+      const res = await api.get<{ slots: Slot[] }>(`/business/${slug}/availability?serviceId=${serviceId}&date=${date}`);
       setSlots(res.slots || []);
       setError(null);
     } catch (err) {
@@ -245,7 +245,7 @@ function BookingSection({ slug, services, currency, brand, rules }: {
     setError(null);
     try {
       const res = await api.post<{ appointment: { reference: string; start_at: string; service: string; staff: string; price_cents: number } }>(
-        `/public/business/${slug}/book`,
+        `/business/${slug}/book`,
         {
           serviceId: service.id, staffId: slot.staffId, startAt: slot.startAt,
           name: form.name.trim(), phone: form.phone.trim(),
@@ -410,7 +410,7 @@ function ChatWidget({ slug, brand, name }: { slug: string; brand: string; name: 
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{ reply: string }>('/public/chat', { slug, message: body, sessionId: session.current });
+      const res = await api.post<{ reply: string }>('/chat', { slug, message: body, sessionId: session.current });
       setMessages((rows) => [...rows, { role: 'assistant', body: res.reply }]);
     } catch (err) {
       setError(errorMessage(err));
@@ -474,7 +474,7 @@ function ChatWidget({ slug, brand, name }: { slug: string; brand: string; name: 
 
 function EmbedBlock({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
-  const snippet = `<script src="${window.location.origin}/api/public/business/${slug}/widget.js" async></script>`;
+  const snippet = `<script src="${window.location.origin}/api/business/${slug}/widget.js" async></script>`;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(snippet);

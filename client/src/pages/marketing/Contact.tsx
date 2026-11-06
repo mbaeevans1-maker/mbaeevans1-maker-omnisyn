@@ -46,7 +46,7 @@ export function Contact() {
     setErrors({});
     setState('sending');
     try {
-      await api.post('/api/public/contact', form);
+      await api.post('/public/contact', form);
       setState('sent');
       setForm({ name: '', email: '', phone: '', organisation: '', subject: '', message: '' });
     } catch (err) {
@@ -196,7 +196,7 @@ export function Partnerships() {
     setErrors({});
     setState('sending');
     try {
-      await api.post('/api/public/partnership', form);
+      await api.post('/public/partnership', form);
       setState('sent');
     } catch (err) {
       setState('idle');

@@ -40,8 +40,8 @@ export default function Pricing() {
     (async () => {
       try {
         const [p, s] = await Promise.all([
-          api.get<{ plans: Plan[] }>('/api/public/plans'),
-          api.get<PlatformStatus>('/api/public/platform-status').catch(() => null),
+          api.get<{ plans: Plan[] }>('/public/plans'),
+          api.get<PlatformStatus>('/public/platform-status').catch(() => null),
         ]);
         if (!live) return;
         setPlans(p.plans);

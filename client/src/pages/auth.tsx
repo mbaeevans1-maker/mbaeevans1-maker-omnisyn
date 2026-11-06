@@ -133,7 +133,7 @@ export function Signup() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get<{ plans: Plan[] }>('/api/public/plans')
+    api.get<{ plans: Plan[] }>('/public/plans')
       .then((d) => setPlans(d.plans))
       .catch(() => setPlans([]));
   }, []);
