@@ -279,7 +279,7 @@ function CustomerDrawer({ id, onClose, onEdit }: { id: string; onClose: () => vo
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-3">
             <MiniStat label="Visits" value={num(Number(data.customer.visits || 0))} />
-            <MiniStat label="Spend" value={money(data.customer.total_spent_cents || 0)} />
+            <MiniStat label="Spend" value={money(Number(data.customer.total_spent_cents || 0))} />
             <MiniStat label="Last visit" value={data.customer.last_visit_at ? relative(data.customer.last_visit_at) : '—'} />
           </div>
 
