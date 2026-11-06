@@ -340,7 +340,7 @@ function deterministicReply({ tenant, settings, ctx, text, conversation }) {
 /* ------------------------------------------------------------------ *
  * Public entry point
  * ------------------------------------------------------------------ */
-export async function respondToMessage({ tenant, settings, conversation, history, text, channel = 'web' }) {
+export async function respondToMessage({ tenant, settings, conversation, history, text, channel = 'web', dryRun = false }) {
   const ctx = businessContext(tenant);
   const provider = aiProvider();
   const trimmed = String(text || '').slice(0, 2000);
@@ -362,7 +362,7 @@ export async function respondToMessage({ tenant, settings, conversation, history
         try {
           const payload = JSON.parse(directive[1]);
           const service = serviceById(tenant.id, payload.serviceId);
-          if (service) {
+          if (service && !dryRun) {
             const created = createAppointment({
               tenant,
               serviceId: service.id,
