@@ -317,8 +317,8 @@ export function Tabs<T extends string>({ tabs, value, onChange, className = '' }
 /* ------------------------------------------------------------------ */
 
 export function Modal({
-  open, onClose, title, description, children, footer, width = 'md',
-}: { open: boolean; onClose: () => void; title: string; description?: string; children: ReactNode; footer?: ReactNode; width?: 'sm' | 'md' | 'lg' }) {
+  open, onClose, title, description, subtitle, wide = false, children, footer, width = wide ? 'lg' : 'md',
+}: { open: boolean; onClose: () => void; title: string; description?: string; subtitle?: string; wide?: boolean; children: ReactNode; footer?: ReactNode; width?: 'sm' | 'md' | 'lg' }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
