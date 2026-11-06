@@ -868,6 +868,15 @@ const knowledgeSchema = z.object({
   active: z.boolean().optional(),
 });
 
+router.get('/knowledge', guard, can('ai:read'), (req, res) => {
+  const tenant = tenantOf(req);
+  const kind = typeof req.query.kind === 'string' ? req.query.kind : null;
+  const rows = kind
+    ? all(`SELECT * FROM knowledge_entries WHERE tenant_id = ? AND kind = ? ORDER BY title`, [tenant.id, kind])
+    : all(`SELECT * FROM knowledge_entries WHERE tenant_id = ? ORDER BY kind, title`, [tenant.id]);
+  res.json({ knowledge: rows, total: rows.length });
+});
+
 router.post('/knowledge', guard, can('ai:write'), (req, res) => {
   const tenant = tenantOf(req);
   const data = validate(knowledgeSchema, req.body);
