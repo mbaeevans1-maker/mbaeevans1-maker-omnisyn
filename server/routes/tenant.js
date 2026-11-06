@@ -407,6 +407,23 @@ router.patch('/appointments/:id', guard, can('bookings:write'), (req, res) => {
       body: `${appt.customer_name || 'Customer'} — ${appt.service_name || 'Service'}`,
       level: data.status === 'cancelled' ? 'warning' : 'info',
     });
+
+    const event =
+      data.status === 'cancelled' ? 'appointment.cancelled'
+        : data.status === 'completed' ? 'appointment.completed'
+          : data.status === 'no_show' ? 'appointment.no_show'
+            : null;
+    if (event) {
+      void fireEvent({
+        tenant, event, appointment: apptById(tenant.id, appt.id), actor: req.user,
+      }).catch((err) => console.error('[mavyron] appointment automation failed', err?.message || err));
+    }
+  }
+
+  if (moving && nextStatus !== 'cancelled') {
+    void fireEvent({
+      tenant, event: 'appointment.rescheduled', appointment: apptById(tenant.id, appt.id), actor: req.user,
+    }).catch((err) => console.error('[mavyron] reschedule automation failed', err?.message || err));
   }
 
   res.json({ appointment: apptById(tenant.id, appt.id) });

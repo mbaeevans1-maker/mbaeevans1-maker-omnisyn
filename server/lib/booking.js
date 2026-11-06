@@ -214,7 +214,29 @@ export function createAppointment({
   if (actor) {
     // audit handled by route layer to keep this module DB-focused
   }
-  return { appointment, service, staff, customer: get(`SELECT * FROM customers WHERE id = ?`, [appointment.customer_id]) };
+  const resolvedCustomer = get(`SELECT * FROM customers WHERE id = ?`, [appointment.customer_id]);
+  const tenantRow = get(`SELECT * FROM tenants WHERE id = ?`, [tenant.id]) || tenant;
+  const eventRow = {
+    id: appointment.id,
+    start_at: appointment.start_at,
+    customer_name: resolvedCustomer?.name || 'Customer',
+    customer_phone: resolvedCustomer?.phone || null,
+    service_name: service.name,
+    staff_name: staff.name,
+  };
+  const isNewCustomer =
+    Boolean(resolvedCustomer) &&
+    (resolvedCustomer.visits ?? 0) <= 1 &&
+    Date.now() - new Date(resolvedCustomer.created_at || 0).getTime() < 120_000;
+
+  void fireEvent({ tenant: tenantRow, event: 'appointment.created', appointment: eventRow, actor })
+    .catch((err) => console.error('[mavyron] appointment.created automation failed', err?.message || err));
+  if (isNewCustomer) {
+    void fireEvent({ tenant: tenantRow, event: 'customer.created', customer: resolvedCustomer, appointment: eventRow })
+      .catch((err) => console.error('[mavyron] customer.created automation failed', err?.message || err));
+  }
+
+  return { appointment, service, staff, customer: resolvedCustomer };
 }
 
 export function appointmentView(rows) {
