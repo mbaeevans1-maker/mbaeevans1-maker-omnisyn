@@ -259,7 +259,7 @@ export function Pathway({ steps }: { steps: { title: string; body: string }[] })
 /* Partnership ecosystem orbit                                         */
 /* ------------------------------------------------------------------ */
 
-export function EcosystemOrbit({ centre, orbiters }: { centre: string; orbiters: string[] }) {
+export function EcosystemOrbit({ centre, orbiters, className = '' }: { centre: string; orbiters: string[]; className?: string }) {
   const [hover, setHover] = useState<string | null>(null);
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[520px]">
