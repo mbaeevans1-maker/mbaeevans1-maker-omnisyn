@@ -8,6 +8,9 @@ import { createAppointment } from '../lib/booking.js';
 import { respondToMessage, recordMessage, getAiSettings, aiStatus } from '../lib/ai.js';
 import { platformConfigStatus } from '../lib/integrations.js';
 
+import { whatsappLink, fireEvent } from '../lib/automations.js';
+import { platformSettings, payoutProfile } from '../lib/payments.js';
+
 const router = Router();
 
 function publicBase(req) {

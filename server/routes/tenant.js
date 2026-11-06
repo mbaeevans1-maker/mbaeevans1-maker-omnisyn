@@ -17,7 +17,17 @@ import {
 } from '../lib/integrations.js';
 import { billingSummary, planById, initializeCheckout, usageFor, TRIAL_DAYS } from '../lib/billing.js';
 
+import {
+  listAutomations, listOutbox, markOutboxSent, fireEvent, enqueueMessage,
+  runDueAutomations, renderTemplate, whatsappLink,
+} from '../lib/automations.js';
+import { insights } from '../lib/insights.js';
+import { paymentInstructions, listPaymentRequests, createPaymentRequest } from '../lib/payments.js';
+
 const router = Router();
+
+const absoluteBase = (req) =>
+  process.env.PUBLIC_BASE_URL || `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
 const guard = [requireAuth, requireTenant];
 const can = (perm) => requirePermission(perm);
 

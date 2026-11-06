@@ -7,6 +7,13 @@ import { listIntegrations } from '../lib/integrations.js';
 import { planById, listPlans, usageFor, TRIAL_DAYS, paymentProviders } from '../lib/billing.js';
 import { aiStatus } from '../lib/ai.js';
 
+import { launchReadiness, systemHealth } from '../lib/readiness.js';
+import {
+  platformSettings, setSetting, payoutProfile, listPaymentRequests,
+  verifyPaymentRequest, paymentStats,
+} from '../lib/payments.js';
+import { listOutbox } from '../lib/automations.js';
+
 const router = Router();
 router.use(requireAuth, requirePlatformAdmin);
 
