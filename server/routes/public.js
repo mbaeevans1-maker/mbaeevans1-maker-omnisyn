@@ -349,4 +349,92 @@ router.post('/partnership', leadRate, (req, res, next) => {
   }
 });
 
+/* --------------------------- public reviews --------------------------- */
+
+router.get('/business/:slug/reviews', (req, res) => {
+  const tenant = publishedTenant(req.params.slug);
+  if (!tenant) throw notFound('Business not found.');
+  const reviews = all(
+    `SELECT id, rating, comment, author_name, created_at, reply
+       FROM reviews WHERE tenant_id = ? AND status = 'published'
+      ORDER BY created_at DESC LIMIT 50`,
+    [tenant.id],
+  );
+  const summary = get(
+    `SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0) AS average
+       FROM reviews WHERE tenant_id = ? AND status = 'published'`,
+    [tenant.id],
+  );
+  res.json({
+    reviews,
+    summary: { total: summary?.total ?? 0, average: Math.round((summary?.average ?? 0) * 10) / 10 },
+  });
+});
+
+router.post('/business/:slug/reviews', rateLimit({ windowMs: 60_000, max: 5 }), (req, res) => {
+  const tenant = publishedTenant(req.params.slug);
+  if (!tenant) throw notFound('Business not found.');
+  const data = validate(z.object({
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().max(1000).optional(),
+    authorName: z.string().trim().min(2, 'Add your name.').max(80),
+    phone: z.string().trim().min(7, 'Add the phone number used for the booking.').max(40),
+    appointmentId: z.string().trim().min(4).max(60),
+  }), req.body || {});
+
+  // A review is only accepted against a real appointment belonging to this
+  // business, and the phone must match the booking. No invented reviews.
+  const appointment = get(
+    `SELECT a.*, c.name AS customer_name, c.phone AS customer_phone
+       FROM appointments a JOIN customers c ON c.id = a.customer_id
+      WHERE a.id = ? AND a.tenant_id = ?`,
+    [data.appointmentId, tenant.id],
+  );
+  if (!appointment) throw notFound('We could not find that booking for this business.');
+  const digits = (value) => String(value || '').replace(/\D/g, '').slice(-9);
+  if (digits(appointment.customer_phone) !== digits(data.phone)) {
+    throw badRequest('That phone number does not match the booking.');
+  }
+  if (appointment.status !== 'completed') {
+    throw badRequest('Reviews open once your appointment is completed.');
+  }
+  const existing = get(`SELECT id FROM reviews WHERE appointment_id = ?`, [appointment.id]);
+  if (existing) throw conflict('This appointment already has a review.');
+
+  const id = newId('rev_');
+  run(
+    `INSERT INTO reviews (id, tenant_id, appointment_id, customer_id, author_name, rating, comment, status, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,'published',?,?)`,
+    [id, tenant.id, appointment.id, appointment.customer_id, data.authorName, data.rating,
+      data.comment || null, nowIso(), nowIso()],
+  );
+  void fireEvent({
+    tenant,
+    event: 'review.received',
+    appointment,
+    customer: { name: data.authorName, phone: appointment.customer_phone },
+  }).catch(() => {});
+  res.status(201).json({ review: get(`SELECT * FROM reviews WHERE id = ?`, [id]) });
+});
+
+/* ----------------------- platform contact channels ----------------------- */
+
+router.get('/channels', (_req, res) => {
+  const settings = platformSettings();
+  const payout = payoutProfile();
+  const support = settings.support_whatsapp || payout.mpesa || '0748734197';
+  res.json({
+    support_whatsapp: support,
+    support_email: settings.support_email || 'mbaeevans1@gmail.com',
+    ceo_whatsapp: settings.ceo_whatsapp || '0748734197',
+    payout_mpesa: payout.mpesa,
+    social: {
+      instagram: settings.social_instagram || 'Evans mbae',
+      tiktok: settings.social_tiktok || null,
+      facebook: settings.social_facebook || 'Mbae Evans',
+    },
+    whatsapp_url: whatsappLink(support, 'Hello MAVYRON — I would like to speak to the team.'),
+  });
+});
+
 export default router;
