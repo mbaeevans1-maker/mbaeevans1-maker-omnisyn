@@ -58,7 +58,7 @@ export function AppShell() {
 
   const workspace = useMemo(() => WORKSPACE.filter((i) => !i.permission || can(i.permission)), [can]);
   const account = useMemo(() => ACCOUNT.filter((i) => !i.permission || can(i.permission)), [can]);
-  const isPlatformAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const isPlatformAdmin = user?.role === 'platform_admin';
   const onboardingIncomplete = tenant && tenant.onboarding_step < 11;
 
   const markRead = async () => {
