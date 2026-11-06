@@ -431,16 +431,18 @@ export function Progress({ value, max = 100, tone = 'violet' }: { value: number;
   );
 }
 
-export function Alert({ tone = 'info', title, children }: { tone?: 'info' | 'warn' | 'danger' | 'ok'; title?: string; children?: ReactNode }) {
+export function Alert({ tone = 'info', title, children }: { tone?: 'info' | 'warn' | 'danger' | 'ok' | 'success' | 'error' | 'warning'; title?: string; children?: ReactNode }) {
+  const aliases: Record<string, string> = { success: 'ok', error: 'danger', warning: 'warn' };
+  const resolved = aliases[tone] || tone;
   const map = {
     info: 'border-violet/25 bg-violet/[0.07] text-[#c3b2ff]',
     warn: 'border-amber-400/25 bg-amber-400/[0.06] text-amber-200',
     danger: 'border-red-400/25 bg-red-400/[0.06] text-red-200',
     ok: 'border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200',
   };
-  const Icon = tone === 'danger' || tone === 'warn' ? AlertTriangle : Info;
+  const Icon = resolved === 'danger' || resolved === 'warn' ? AlertTriangle : Info;
   return (
-    <div className={`flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-[0.78rem] leading-relaxed ${map[tone]}`}>
+    <div className={`flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-[0.78rem] leading-relaxed ${map[resolved as keyof typeof map]}`}>
       <Icon size={15} className="mt-0.5 shrink-0" />
       <div>
         {title && <p className="font-medium">{title}</p>}
