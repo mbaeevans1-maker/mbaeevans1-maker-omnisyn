@@ -109,6 +109,29 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: { message: 'Something went wrong. Please try again.', code: 'server_error' } });
 });
 
+/* ---------------------- automation sweeper ---------------------- */
+const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+let sweepRunning = false;
+
+async function sweepAutomations() {
+  if (sweepRunning) return;
+  sweepRunning = true;
+  try {
+    const { runDueAutomations } = await import('./lib/automations.js');
+    const result = await runDueAutomations();
+    if (result.reminders || result.winbacks) {
+      console.log(`[mavyron] automations: ${result.reminders} reminders, ${result.winbacks} win-backs`);
+    }
+  } catch (err) {
+    console.error('[mavyron] automation sweep failed', err?.message || err);
+  } finally {
+    sweepRunning = false;
+  }
+}
+
+setTimeout(sweepAutomations, 20_000).unref();
+setInterval(sweepAutomations, SWEEP_INTERVAL_MS).unref();
+
 const server = app.listen(PORT, HOST, () => {
   console.log(`[mavyron] listening on http://${HOST}:${PORT}`);
 });

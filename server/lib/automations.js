@@ -313,8 +313,8 @@ export async function runDueAutomations({ tenantLimit = 200, perTenantLimit = 25
   const to = new Date(now + 25 * 3600_000).toISOString();
 
   const tenants = all(
-    `SELECT * FROM tenants WHERE suspended_at IS NULL ORDER BY created_at LIMIT ?`,
-    [tenantLimit],
+    `SELECT * FROM tenants WHERE suspended_at IS NULL ${tenantId ? 'AND id = ?' : ''} ORDER BY created_at LIMIT ?`,
+    tenantId ? [tenantId, tenantLimit] : [tenantLimit],
   );
 
   let reminders = 0;

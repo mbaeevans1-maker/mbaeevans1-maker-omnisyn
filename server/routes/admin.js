@@ -422,4 +422,135 @@ router.get('/usage', (_req, res) => {
   });
 });
 
+/* --------------------- launch readiness & health --------------------- */
+
+router.get('/readiness', (_req, res) => {
+  res.json(launchReadiness());
+});
+
+router.get('/health', (_req, res) => {
+  res.json(systemHealth());
+});
+
+/* ------------------------- platform settings ------------------------- */
+
+const SETTINGS_WHITELIST = [
+  'payout_mpesa', 'payout_mpesa_name', 'payout_bank_name', 'payout_bank_account',
+  'payout_account_name', 'payout_notes', 'support_whatsapp', 'support_email',
+  'ceo_whatsapp', 'social_instagram', 'social_tiktok', 'social_facebook',
+  'readiness_mobile_verified', 'billing_mode', 'platform_notice',
+];
+
+router.get('/settings', (_req, res) => {
+  res.json({ settings: platformSettings(), payout: payoutProfile() });
+});
+
+router.patch('/settings', (req, res) => {
+  const data = validate(
+    z.object({
+      settings: z.record(z.string(), z.string().max(500)),
+    }),
+    req.body || {},
+  );
+  const updated = [];
+  const rejected = [];
+  for (const [key, value] of Object.entries(data.settings)) {
+    if (!SETTINGS_WHITELIST.includes(key)) {
+      rejected.push(key);
+      continue;
+    }
+    setSetting(key, value);
+    updated.push(key);
+  }
+  audit({
+    tenantId: null, actor: req.user, action: 'platform.settings.update',
+    target: 'platform_settings', meta: { updated, rejected }, ip: req.ip,
+  });
+  res.json({ settings: platformSettings(), updated, rejected });
+});
+
+/* --------------------- subscription payments (admin) --------------------- */
+
+router.get('/payments', (req, res) => {
+  const status = req.query.status ? String(req.query.status) : null;
+  res.json({
+    requests: listPaymentRequests({ status, limit: 200 }),
+    stats: paymentStats(),
+    payout: payoutProfile(),
+  });
+});
+
+router.post('/payments/:id/verify', (req, res) => {
+  const data = validate(
+    z.object({
+      decision: z.enum(['verify', 'reject']),
+      note: z.string().trim().max(500).optional(),
+    }),
+    req.body || {},
+  );
+  const result = verifyPaymentRequest({
+    requestId: req.params.id, admin: req.user, decision: data.decision, note: data.note || null,
+  });
+  audit({
+    tenantId: result?.tenant_id || null, actor: req.user, action: `payment.${data.decision}`,
+    target: req.params.id, meta: { amount_cents: result?.amount_cents }, ip: req.ip,
+  });
+  res.json({ request: result });
+});
+
+/* -------------------------- account control -------------------------- */
+
+router.post('/tenants/:id/suspend', (req, res) => {
+  const tenant = get(`SELECT * FROM tenants WHERE id = ?`, [req.params.id]);
+  if (!tenant) throw notFound('Business not found.');
+  const data = validate(
+    z.object({ reason: z.string().trim().min(3, 'Give a reason for suspension.').max(300) }),
+    req.body || {},
+  );
+  run(
+    `UPDATE tenants SET status = 'suspended', suspended_at = ?, suspension_reason = ?, updated_at = ? WHERE id = ?`,
+    [nowIso(), data.reason, nowIso(), tenant.id],
+  );
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'tenant.suspend',
+    target: tenant.id, meta: { reason: data.reason }, ip: req.ip,
+  });
+  notify({
+    tenantId: tenant.id, title: 'Workspace suspended',
+    body: data.reason, level: 'warning',
+  });
+  res.json({ tenant: get(`SELECT * FROM tenants WHERE id = ?`, [tenant.id]) });
+});
+
+router.post('/tenants/:id/reactivate', (req, res) => {
+  const tenant = get(`SELECT * FROM tenants WHERE id = ?`, [req.params.id]);
+  if (!tenant) throw notFound('Business not found.');
+  run(
+    `UPDATE tenants SET status = 'active', suspended_at = NULL, suspension_reason = NULL, updated_at = ? WHERE id = ?`,
+    [nowIso(), tenant.id],
+  );
+  audit({
+    tenantId: tenant.id, actor: req.user, action: 'tenant.reactivate', target: tenant.id, ip: req.ip,
+  });
+  notify({
+    tenantId: tenant.id, title: 'Workspace reactivated',
+    body: 'Your MAVYRON workspace is active again.', level: 'success',
+  });
+  res.json({ tenant: get(`SELECT * FROM tenants WHERE id = ?`, [tenant.id]) });
+});
+
+/* ----------------------- platform-wide outbox ----------------------- */
+
+router.get('/outbox', (req, res) => {
+  const status = req.query.status ? String(req.query.status) : null;
+  const rows = all(
+    `SELECT o.*, t.name AS tenant_name FROM outbox o
+       LEFT JOIN tenants t ON t.id = o.tenant_id
+      ${status ? 'WHERE o.status = ?' : ''}
+      ORDER BY o.created_at DESC LIMIT 200`,
+    status ? [status] : [],
+  );
+  res.json({ messages: rows });
+});
+
 export default router;
