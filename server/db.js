@@ -376,6 +376,140 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 );
 `);
 
+/* ------------------------------------------------------------------ *
+ * Incremental migrations — additive only, safe to run on every boot.
+ * ------------------------------------------------------------------ */
+
+function addColumn(table, column, ddl) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  } catch (err) {
+    console.warn(`[mavyron] migration skipped ${table}.${column}: ${err.message}`);
+  }
+}
+
+// Business payout + public social identity (owner-supplied, verified by platform admin).
+addColumn('tenants', 'payout_mpesa', 'TEXT');
+addColumn('tenants', 'payout_bank_name', 'TEXT');
+addColumn('tenants', 'payout_bank_account', 'TEXT');
+addColumn('tenants', 'payout_account_name', 'TEXT');
+addColumn('tenants', 'payout_notes', 'TEXT');
+addColumn('tenants', 'social_instagram', 'TEXT');
+addColumn('tenants', 'social_facebook', 'TEXT');
+addColumn('tenants', 'social_tiktok', 'TEXT');
+addColumn('tenants', 'suspended_at', 'TEXT');
+addColumn('tenants', 'suspension_reason', 'TEXT');
+
+// Automation + reminder bookkeeping on appointments.
+addColumn('appointments', 'reminder_sent_at', 'TEXT');
+addColumn('appointments', 'cancel_reason', 'TEXT');
+addColumn('appointments', 'rescheduled_from', 'TEXT');
+addColumn('customers', 'last_reengagement_at', 'TEXT');
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS platform_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS automations (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  trigger TEXT NOT NULL,
+  audience TEXT NOT NULL DEFAULT 'customer',
+  channel TEXT NOT NULL DEFAULT 'whatsapp',
+  delay_minutes INTEGER NOT NULL DEFAULT 0,
+  template TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  run_count INTEGER NOT NULL DEFAULT 0,
+  last_run_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (tenant_id, key)
+);
+
+CREATE TABLE IF NOT EXISTS outbox (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  automation_key TEXT,
+  channel TEXT NOT NULL,
+  recipient TEXT,
+  recipient_name TEXT,
+  body TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued',
+  dispatch_mode TEXT NOT NULL DEFAULT 'manual',
+  provider_ref TEXT,
+  wa_link TEXT,
+  error TEXT,
+  related_type TEXT,
+  related_id TEXT,
+  created_at TEXT NOT NULL,
+  sent_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_outbox_tenant ON outbox(tenant_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  appointment_id TEXT,
+  customer_id TEXT,
+  customer_name TEXT,
+  rating INTEGER NOT NULL,
+  comment TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reply TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_tenant ON reviews(tenant_id, status);
+
+CREATE TABLE IF NOT EXISTS payment_requests (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  invoice_id TEXT,
+  plan_id TEXT,
+  interval TEXT NOT NULL DEFAULT 'monthly',
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'KES',
+  method TEXT NOT NULL,
+  payer_reference TEXT,
+  payer_phone TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'awaiting_verification',
+  verified_by TEXT,
+  verified_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_payment_requests_tenant ON payment_requests(tenant_id, created_at DESC);
+`);
+
+const DEFAULT_SETTINGS = {
+  payout_mpesa: '0702597951',
+  payout_mpesa_name: 'MAVYRON',
+  payout_bank_name: '',
+  payout_bank_account: '',
+  payout_account_name: '',
+  payout_notes: 'Bank details are added by the platform owner. Card and mobile-money collection runs through the payment provider once live credentials are configured.',
+  support_whatsapp: '0748734197',
+  business_whatsapp: '0702597951',
+  owner_email: 'mbaeevans1@gmail.com',
+  owner_name: 'Evans Karani Mbae',
+  social_instagram: 'https://instagram.com/Evans Mbae',
+  social_facebook: 'https://facebook.com/Mbae Evans',
+  social_tiktok: 'https://tiktok.com/@Evans Karani',
+};
+
+for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+  db.prepare(`INSERT INTO platform_settings (key, value, updated_at) VALUES (?,?,?)
+              ON CONFLICT(key) DO NOTHING`).run(key, value, new Date().toISOString());
+}
+
 export const get = (sql, params = []) => db.prepare(sql).get(...params);
 export const all = (sql, params = []) => db.prepare(sql).all(...params);
 export const run = (sql, params = []) => db.prepare(sql).run(...params);
