@@ -110,12 +110,12 @@ export function Select({ label, hint, error, options, className = '', id, requir
   );
 }
 
-export function Switch({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
+export function Switch({ checked, onChange, label, description }: { checked: boolean | number; onChange: (v: boolean) => void; label: string; description?: string }) {
   return (
     <button
       type="button"
       role="switch"
-      aria-checked={checked}
+      aria-checked={Boolean(checked)}
       onClick={() => onChange(!checked)}
       className="flex items-center justify-between gap-4 w-full text-left py-2"
     >
@@ -359,15 +359,17 @@ export function Modal({
 /* Toasts                                                              */
 /* ------------------------------------------------------------------ */
 
-type Toast = { id: string; title: string; body?: string; tone: 'ok' | 'error' | 'info' };
-type ToastApi = { push: (t: Omit<Toast, 'id'>) => void; ok: (title: string, body?: string) => void; error: (title: string, body?: string) => void; info: (title: string, body?: string) => void };
+type ToastTone = 'ok' | 'error' | 'info' | 'warn' | 'danger' | 'success';
+type Toast = { id: string; title: string; body?: string; tone: ToastTone };
+type ToastApi = { push: (t: Omit<Toast, 'id'> | string, tone?: ToastTone) => void; ok: (title: string, body?: string) => void; error: (title: string, body?: string) => void; info: (title: string, body?: string) => void };
 
 const ToastContext = createContext<ToastApi | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Toast[]>([]);
 
-  const push = useCallback((t: Omit<Toast, 'id'>) => {
+  const push = useCallback((input: Omit<Toast, 'id'> | string, tone: ToastTone = 'ok') => {
+    const t: Omit<Toast, 'id'> = typeof input === 'string' ? { title: input, tone } : input;
     const id = Math.random().toString(36).slice(2);
     setItems((prev) => [...prev.slice(-3), { ...t, id }]);
     setTimeout(() => setItems((prev) => prev.filter((i) => i.id !== id)), 5200);
@@ -422,7 +424,7 @@ export function useToast(): ToastApi {
 /* Misc                                                                */
 /* ------------------------------------------------------------------ */
 
-export function Progress({ value, max = 100, tone = 'violet' }: { value: number; max?: number; tone?: 'violet' | 'gold' | 'danger' }) {
+export function Progress({ value, max = 100, tone = 'violet' }: { value: number; max?: number; tone?: 'violet' | 'gold' | 'danger' | 'warn' }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   const bg = tone === 'gold' ? 'bg-gold' : tone === 'danger' ? 'bg-red-400' : 'bg-gradient-to-r from-violet-soft to-violet';
   return (

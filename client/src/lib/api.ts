@@ -135,6 +135,8 @@ export type SubscriptionSummary = {
   current_period_end?: string | null;
   cancel_at_period_end?: number | boolean;
   days_left?: number | null;
+  trial_days_left?: number | null;
+  trialing?: boolean;
   [key: string]: unknown;
 };
 
@@ -181,7 +183,7 @@ export type Customer = {
   email?: string | null;
   phone?: string | null;
   notes?: string | null;
-  tags?: string | null;
+  tags?: string | string[] | null;
   marketing_consent?: number | boolean;
   created_at: string;
   visits?: number;
@@ -214,6 +216,11 @@ export type StaffMember = {
   active: number | boolean;
   user_id?: string | null;
   role?: string | null;
+  service_ids?: string[];
+  schedules?: Array<{
+    id?: string; staff_id?: string; weekday: number; start_min: number; end_min: number;
+    break_start?: number | null; break_end?: number | null;
+  }>;
   [key: string]: unknown;
 };
 
