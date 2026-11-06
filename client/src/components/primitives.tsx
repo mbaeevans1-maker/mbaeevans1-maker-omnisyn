@@ -152,9 +152,10 @@ export function StatusChip({ status, label }: { status?: string | null; label?: 
   return <Chip tone={tone === 'muted' ? 'muted' : tone}>{label || titleCase(status || 'unknown')}</Chip>;
 }
 
-export function Dot({ tone = 'ok' }: { tone?: 'ok' | 'warn' | 'danger' | 'muted' | 'violet' }) {
+export function Dot({ tone = 'ok' }: { tone?: 'ok' | 'warn' | 'danger' | 'muted' | 'violet' | 'error' | 'info' | 'success' | 'warning' }) {
   const colors: Record<string, string> = {
     ok: 'bg-emerald-400', warn: 'bg-amber-300', danger: 'bg-red-400', muted: 'bg-slate-500', violet: 'bg-violet-soft',
+    error: 'bg-red-400', info: 'bg-sky-400', success: 'bg-emerald-400', warning: 'bg-amber-300',
   };
   return <span className={`inline-block h-1.5 w-1.5 rounded-full ${colors[tone]}`} />;
 }
