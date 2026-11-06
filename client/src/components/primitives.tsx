@@ -181,14 +181,15 @@ export function CardHeader({ title, subtitle, action, eyebrow }: { title: ReactN
   );
 }
 
-export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; title: string; body?: string; action?: ReactNode }) {
+export function EmptyState({ icon, title, body, description, action }: { icon?: ReactNode; title: string; body?: string; description?: string; action?: ReactNode }) {
+  const copy = body || description;
   return (
     <div className="flex flex-col items-center justify-center text-center px-6 py-14">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-violet-soft">
         {icon || <Info size={20} />}
       </div>
       <p className="text-sm text-[#dde2ec]">{title}</p>
-      {body && <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[#7d8798]">{body}</p>}
+      {copy && <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[#7d8798]">{copy}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
