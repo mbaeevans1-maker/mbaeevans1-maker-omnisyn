@@ -139,11 +139,12 @@ export function Switch({ checked, onChange, label, description }: { checked: boo
 /* Chips                                                               */
 /* ------------------------------------------------------------------ */
 
-export function Chip({ children, tone = 'default', className = '' }: { children: ReactNode; tone?: 'default' | 'violet' | 'gold' | 'ok' | 'warn' | 'danger' | 'muted'; className?: string }) {
+export function Chip({ children, tone = 'default', className = '' }: { children: ReactNode; tone?: 'default' | 'violet' | 'gold' | 'ok' | 'warn' | 'danger' | 'muted' | 'success' | 'error' | 'warning' | 'info'; className?: string }) {
+  const aliases: Record<string, string> = { success: 'ok', error: 'danger', warning: 'warn', info: 'violet' };
   const map: Record<string, string> = {
     default: '', violet: 'chip-violet', gold: 'chip-gold', ok: 'chip-ok', warn: 'chip-warn', danger: 'chip-danger', muted: 'chip-muted',
   };
-  return <span className={`chip ${map[tone]} ${className}`}>{children}</span>;
+  return <span className={`chip ${map[aliases[tone] || tone]} ${className}`}>{children}</span>;
 }
 
 export function StatusChip({ status, label }: { status?: string | null; label?: string }) {
