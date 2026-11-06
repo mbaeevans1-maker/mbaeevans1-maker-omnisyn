@@ -295,6 +295,7 @@ try {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 }
 
+if (failures.length && serverLog) console.log('--- server log (tail) ---\n' + serverLog.slice(-4000));
 console.log(`\n${passed} checks passed, ${failures.length} failed`);
 if (failures.length) {
   console.log(failures.map((f) => ` - ${f}`).join('\n'));
