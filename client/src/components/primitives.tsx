@@ -11,7 +11,7 @@ import { statusTone, titleCase, initials } from '../lib/format';
 /* ------------------------------------------------------------------ */
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost' | 'gold' | 'quiet' | 'danger';
+  variant?: 'primary' | 'ghost' | 'gold' | 'quiet' | 'danger' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   block?: boolean;
