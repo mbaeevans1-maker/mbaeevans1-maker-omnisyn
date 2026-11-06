@@ -197,7 +197,7 @@ export function Settings() {
 
   const removeKnowledge = async (row: Knowledge) => {
     try {
-      await api.delete(`/tenant/knowledge/${row.id}`);
+      await api.del(`/tenant/knowledge/${row.id}`);
       setKnowledge((rows) => rows.filter((r) => r.id !== row.id));
       toast.ok('Knowledge removed');
     } catch (err) {
@@ -234,7 +234,7 @@ export function Settings() {
 
   const removeMember = async (member: TeamMember) => {
     try {
-      await api.delete(`/tenant/team/${member.id}`);
+      await api.del(`/tenant/team/${member.id}`);
       setMembers((rows) => rows.filter((r) => r.id !== member.id));
       toast.ok('Access removed');
     } catch (err) {
