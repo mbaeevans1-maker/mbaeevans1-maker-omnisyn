@@ -36,7 +36,7 @@ export function MarketingNav() {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const appHref = user?.role === 'platform_admin' ? '/admin' : tenant ? '/app' : '/onboarding';
+  const appHref = user?.role === 'platform_admin' ? '/admin' : tenant ? '/app' : '/app/setup';
 
   return (
     <>
