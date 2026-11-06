@@ -20,21 +20,25 @@ RUN npm run build \
 FROM node:22-alpine AS runtime
 
 RUN apk upgrade --no-cache \
- && apk add --no-cache libstdc++ tini
+ && apk add --no-cache libstdc++ tini su-exec
 
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
-    DATA_DIR=/app/data
+    DATA_DIR=/data
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/server ./server
 COPY --from=build /app/dist ./dist
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN mkdir -p /app/data && chown -R node:node /app
-USER node
+# /data is the persistent volume mount point: tenant accounts, bookings and
+# knowledge entries must survive redeploys.
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+ && mkdir -p /data \
+ && chown -R node:node /app /data
 
 EXPOSE 3000
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server/index.js"]
