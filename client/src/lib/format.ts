@@ -154,3 +154,5 @@ export function statusTone(status?: string | null): 'ok' | 'warn' | 'danger' | '
 export function digitsOnly(value: string): string {
   return value.replace(/[^\d+]/g, '');
 }
+
+export const timeAgo = relative;

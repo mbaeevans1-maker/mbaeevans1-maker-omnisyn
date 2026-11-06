@@ -12,10 +12,10 @@ import { Contact, Partnerships } from './pages/marketing/Contact';
 import { Login, Signup, ForgotPassword, ResetPassword, VerifyEmail } from './pages/auth';
 
 import { AppShell } from './pages/app/Shell';
-import Overview from './pages/app/Overview';
-import Bookings from './pages/app/Bookings';
-import Customers from './pages/app/Customers';
-import Catalog from './pages/app/Catalog';
+import { OverviewPage as Overview } from './pages/app/Overview';
+import { BookingsPage as Bookings } from './pages/app/Bookings';
+import { CustomersPage as Customers } from './pages/app/Customers';
+import { CatalogPage as Catalog } from './pages/app/Catalog';
 import Inbox from './pages/app/Inbox';
 import Marketing from './pages/app/Marketing';
 import Analytics from './pages/app/Analytics';

@@ -214,7 +214,7 @@ export default function Admin() {
         action={<Chip tone="violet">Platform admin</Chip>}
       />
 
-      <Card><div className="p-2"><Tabs tabs={TABS.map((t) => ({ key: t.key, label: t.label }))} value={tab} onChange={setTab} /></div></Card>
+      <Card><div className="p-2"><Tabs tabs={TABS.map((t) => ({ value: t.key, label: t.label }))} value={tab} onChange={setTab} /></div></Card>
 
       {loading && <Card><SkeletonRows rows={6} /></Card>}
 

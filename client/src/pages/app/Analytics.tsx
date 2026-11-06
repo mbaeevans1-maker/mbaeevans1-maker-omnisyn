@@ -29,7 +29,7 @@ const RANGES = [
 
 export function Analytics() {
   const toast = useToast();
-  const [days, setDays] = useState<'7' | '30' | '90'>('30');
+  const [days, setDays] = useState<string>('30');
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
 

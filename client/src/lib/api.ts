@@ -199,6 +199,8 @@ export type Service = {
   price_cents: number;
   active: number | boolean;
   category?: string | null;
+  buffer_min?: number;
+  staff_ids?: string[];
   [key: string]: unknown;
 };
 
