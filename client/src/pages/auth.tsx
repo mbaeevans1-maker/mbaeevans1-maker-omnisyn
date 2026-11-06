@@ -158,7 +158,7 @@ export function Signup() {
         country: form.country,
         plan_id: form.plan_id,
       });
-      nav('/onboarding', { replace: true });
+      nav('/app/setup', { replace: true });
     } catch (err) {
       setErrors(fieldErrors(err));
       setError(errorMessage(err));
