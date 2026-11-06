@@ -1,10 +1,10 @@
 # ---------- build stage ----------
-FROM node:22-bookworm-slim AS build
+# Alpine/musl base: avoids the unfixed Debian glibc advisories that block the image scan.
+FROM node:22-alpine AS build
 
-RUN apt-get update \
- && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+# Build toolchain is required because better-sqlite3 compiles from source on musl.
+RUN apk upgrade --no-cache \
+ && apk add --no-cache python3 make g++
 
 WORKDIR /app
 ENV NODE_ENV=development
@@ -17,12 +17,10 @@ RUN npm run build \
  && npm prune --omit=dev
 
 # ---------- runtime stage ----------
-FROM node:22-bookworm-slim AS runtime
+FROM node:22-alpine AS runtime
 
-RUN apt-get update \
- && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends ca-certificates tini \
- && rm -rf /var/lib/apt/lists/*
+RUN apk upgrade --no-cache \
+ && apk add --no-cache libstdc++ tini
 
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -38,5 +36,5 @@ RUN mkdir -p /app/data && chown -R node:node /app
 USER node
 
 EXPOSE 3000
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "server/index.js"]
